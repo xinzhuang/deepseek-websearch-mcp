@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DeepSeekClient } from '../src/client.js';
+import { DeepSeekApiError, DeepSeekClient } from '../src/client.js';
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -80,5 +80,135 @@ describe('DeepSeekClient.fetchUrl', () => {
     expect(url).toBe('https://api.deepseek.com/v1/tools/fetch');
     expect(JSON.parse(init.body)).toEqual({ url: 'https://example.com/a' });
     expect(page).toEqual({ title: 'Example', content: '# Hello' });
+  });
+});
+
+describe('DeepSeekClient 重试与超时', () => {
+  it('429 时按 1s 退避重试一次后成功', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse(429, {
+          error: { message: 'rate limited', type: 'rate_limit_error', param: null, code: null },
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse(200, { results: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const sleeps: number[] = [];
+    const client = new DeepSeekClient({
+      apiKey: 'k',
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+    });
+    const res = await client.search({ query: 'x' });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(sleeps).toEqual([1_000]);
+    expect(res.results).toEqual([]);
+  });
+
+  it('连续 5xx 耗尽 3 次尝试后抛出，退避序列为 1s、2s', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(500, {
+        error: { message: 'internal error', type: 'server_error', param: null, code: null },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const sleeps: number[] = [];
+    const client = new DeepSeekClient({
+      apiKey: 'k',
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+    });
+
+    await expect(client.search({ query: 'x' })).rejects.toMatchObject({
+      name: 'DeepSeekApiError',
+      status: 500,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(sleeps).toEqual([1_000, 2_000]);
+  });
+
+  it('402 余额不足不重试', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(402, {
+        error: {
+          message: 'insufficient balance',
+          type: 'insufficient_balance',
+          param: null,
+          code: null,
+        },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const sleeps: number[] = [];
+    const client = new DeepSeekClient({
+      apiKey: 'k',
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+    });
+
+    await expect(client.search({ query: 'x' })).rejects.toMatchObject({ status: 402 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sleeps).toEqual([]);
+  });
+
+  it('400 提取 OpenAI 兼容错误体的 message', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(400, {
+        error: {
+          message: "'count' must be between 1 and 50",
+          type: 'invalid_request_error',
+          param: null,
+          code: null,
+        },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new DeepSeekClient({ apiKey: 'k', sleep: noopSleep });
+    const err = await client.search({ query: 'x', count: 99 }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(DeepSeekApiError);
+    expect(err.status).toBe(400);
+    expect(err.message).toBe("'count' must be between 1 and 50");
+    expect(err.retryable).toBe(false);
+  });
+
+  it('请求超时映射为可重试的 408 并走同一重试预算', async () => {
+    const fetchMock = vi.fn().mockImplementation(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          init.signal.addEventListener('abort', () => {
+            const e = new Error('The operation was aborted');
+            e.name = 'AbortError';
+            reject(e);
+          });
+        }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const sleeps: number[] = [];
+    const client = new DeepSeekClient({
+      apiKey: 'k',
+      timeoutMs: 50,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+    });
+
+    await expect(client.search({ query: 'x' })).rejects.toMatchObject({
+      name: 'DeepSeekApiError',
+      status: 408,
+      retryable: true,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(sleeps).toEqual([1_000, 2_000]);
   });
 });
