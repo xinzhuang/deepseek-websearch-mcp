@@ -66,3 +66,32 @@ export function validateFetchArgs(args: unknown): { url: string } {
   }
   return { url };
 }
+
+/** 将 Search 结果格式化为精简 Markdown（面向模型 token 友好） */
+export function formatSearchResults(results: SearchResult[], needContent: boolean): string {
+  if (results.length === 0) {
+    return '搜索完成，但没有匹配的结果。可尝试调整 query 或放宽过滤语法（site:/lang:/after: 等）。';
+  }
+  const lines: string[] = [`共 ${results.length} 条结果：`, ''];
+  results.forEach((r, i) => {
+    lines.push(`### ${i + 1}. ${r.title}`);
+    lines.push(`- URL: ${r.url}`);
+    const meta: string[] = [];
+    if (r.site_name) meta.push(`站点: ${r.site_name}`);
+    if (r.date) meta.push(`发布: ${r.date.slice(0, 10)}`);
+    meta.push(`权威性: ${r.authority < 0 ? '未知' : `${r.authority}/4`}`);
+    meta.push(`相关性: ${r.rerank_score}`);
+    lines.push(`- ${meta.join(' ｜ ')}`);
+    lines.push(r.summary);
+    if (needContent && r.content) {
+      lines.push('', '正文：', '', r.content);
+    }
+    lines.push('');
+  });
+  return lines.join('\n').trimEnd();
+}
+
+/** 将 Fetch 结果格式化为 Markdown */
+export function formatFetchedPage(page: FetchResponse): string {
+  return page.title ? `# ${page.title}\n\n${page.content}` : page.content;
+}
