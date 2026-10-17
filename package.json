@@ -1,0 +1,36 @@
+{
+  "name": "deepseek-websearch-mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing DeepSeek web search & fetch APIs (web_search / web_fetch) over stdio",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "deepseek-websearch-mcp": "dist/index.js"
+  },
+  "files": ["dist", "README.md"],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": "github:xinzhuang/deepseek-websearch-mcp",
+  "keywords": [
+    "mcp",
+    "deepseek",
+    "web-search",
+    "search",
+    "model-context-protocol"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.2.0"
+  }
+}
