@@ -199,7 +199,7 @@ vitest，四层：
 |---|---|---|
 | 1. client 单元 | 鉴权头、请求体序列化、错误分类、重试次数与退避、超时 | `vi.stubGlobal('fetch', …)` stub 注入 |
 | 2. tools 单元 | Markdown 格式化（含 null 字段省略）、空结果文案、isError 映射、本地校验 | stub client |
-| 3. stdio 端到端 | spawn `dist/index.js`（或 tsx 加载 src），真实 JSON-RPC initialize 握手 → tools/list 断言两个工具 schema → tools/call（`DEEPSEEK_BASE_URL` 指向本地 stub server） | Node http 本地 stub |
+| 3. stdio 端到端 | spawn `tsx src/index.ts`（无需先 build），真实 JSON-RPC initialize 握手 → tools/list 断言两个工具 schema → tools/call（`DEEPSEEK_BASE_URL` 指向本地 stub server） | Node http 本地 stub |
 | 4. 可选集成 | 真实 API 冒烟：真实搜索一次 + 抓取 example.com | `describe.skipIf(!process.env.DEEPSEEK_API_KEY)` |
 
 质量门禁：`tsc --noEmit` 类型检查 + 全量 vitest 通过后才算完成。
@@ -215,14 +215,14 @@ package.json 关键字段：
   "bin": { "deepseek-websearch-mcp": "dist/index.js" },
   "files": ["dist", "README.md"],
   "engines": { "node": ">=20" },
-  "repository": "github:<owner>/deepseek-websearch-mcp"
+  "repository": "github:xinzhuang/deepseek-websearch-mcp"
 }
 ```
 
 - `dist/index.js` 头部带 `#!/usr/bin/env node`
 - 三种主流安装/使用方式（写入 README）：
-  1. `npx -y deepseek-websearch-mcp`（零安装）
-  2. `npm install -g deepseek-websearch-mcp`
+  1. 本仓库阶段（未 publish 到 npm）：`npx -y github:xinzhuang/deepseek-websearch-mcp` 直接从 GitHub 运行；以及 `npm install -g .` 本地全局安装
+  2. 未来 publish 后：`npx -y deepseek-websearch-mcp`（零安装）
   3. 客户端配置片段：Claude Code（`claude mcp add`）、Cursor、VS Code(mcp.json)、通用 JSON（command + env）
 - 发布流程：`npm run build && npm pack` 验证 tarball 内容只含 `dist/` 与 README，推送到 GitHub 打 tag（`v0.1.0`）。npm publish 不在本次范围。
 
