@@ -1,3 +1,4 @@
+import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
 import {
   DeepSeekApiError,
   DeepSeekClient,
@@ -94,4 +95,110 @@ export function formatSearchResults(results: SearchResult[], needContent: boolea
 /** 将 Fetch 结果格式化为 Markdown */
 export function formatFetchedPage(page: FetchResponse): string {
   return page.title ? `# ${page.title}\n\n${page.content}` : page.content;
+}
+
+export const searchToolDefinition: Tool = {
+  name: SEARCH_TOOL_NAME,
+  description:
+    '使用 DeepSeek 搜索引擎搜索网页，返回带排序分数、权威性、发布时间的结构化结果。' +
+    'query 支持 site: / -site: / "精确短语" / lang:zh,en / after:2025 / before:2026 / -排除词 等语法。',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      query: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 128,
+        description:
+          '搜索词，1~128 个字符，不能全为空白。支持搜索语法：site:github.com、-site:example.com、"精确短语"、lang:zh,en、after:2025-01-01、before:2026、-排除词',
+      },
+      count: { type: 'integer', minimum: 1, maximum: 50, description: '返回条数，1~50，默认 10' },
+      ori_question: {
+        type: 'string',
+        maxLength: 128,
+        description: '触发搜索的用户原始问题（可选），有助于更好地理解搜索意图',
+      },
+      localization: {
+        type: 'string',
+        description: '用于优先返回本地化搜索结果的 IP 地址（可选）',
+      },
+      need_content: {
+        type: 'boolean',
+        description: '是否同时返回网页正文，默认 false。正文较长，仅在需要阅读全文时开启',
+      },
+    },
+    required: ['query'],
+  },
+};
+
+export const fetchToolDefinition: Tool = {
+  name: FETCH_TOOL_NAME,
+  description:
+    '抓取单个网页，返回页面标题与 Markdown 正文。适用于读取 web_search 结果中某个 URL 的完整内容。',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      url: {
+        type: 'string',
+        maxLength: 8192,
+        description: '要抓取的网页地址，必须为含主机的 http/https URL，不允许携带用户名或密码',
+      },
+    },
+    required: ['url'],
+  },
+};
+
+/** 将异常映射为模型可读的错误文案 */
+export function describeError(err: unknown): string {
+  if (err instanceof ValidationError) {
+    return `参数错误：${err.message}`;
+  }
+  if (err instanceof DeepSeekApiError) {
+    switch (err.status) {
+      case 400:
+        return `请求不合法（400）：${err.message}`;
+      case 401:
+        return '认证失败（401）：DEEPSEEK_API_KEY 缺失或无效，请检查环境变量配置。';
+      case 402:
+        return '账户余额不足（402）：请前往 DeepSeek 开放平台充值后重试。';
+      case 403:
+        return '请求被拒绝（403）：目标站点被安全策略拦截。';
+      case 404:
+        return '无法抓取该网页（404）：页面不可用、被站点策略拦截或没有可提取的正文。可尝试其他 URL。';
+      case 413:
+        return '请求体过大（413）。';
+      case 429:
+        return '请求过于频繁（429）：Search/Fetch 各有 5 QPS 限制，请稍后重试。';
+      default:
+        return `DeepSeek API 错误（${err.status}）：${err.message}`;
+    }
+  }
+  return `工具执行失败：${err instanceof Error ? err.message : String(err)}`;
+}
+
+function toErrorResult(err: unknown): CallToolResult {
+  return { content: [{ type: 'text', text: describeError(err) }], isError: true };
+}
+
+/** web_search 工具 handler */
+export async function handleSearch(client: DeepSeekClient, args: unknown): Promise<CallToolResult> {
+  try {
+    const params = validateSearchArgs(args);
+    const needContent = params.need_content ?? false;
+    const res = await client.search(params);
+    return { content: [{ type: 'text', text: formatSearchResults(res.results, needContent) }] };
+  } catch (err) {
+    return toErrorResult(err);
+  }
+}
+
+/** web_fetch 工具 handler */
+export async function handleFetch(client: DeepSeekClient, args: unknown): Promise<CallToolResult> {
+  try {
+    const { url } = validateFetchArgs(args);
+    const page = await client.fetchUrl(url);
+    return { content: [{ type: 'text', text: formatFetchedPage(page) }] };
+  } catch (err) {
+    return toErrorResult(err);
+  }
 }

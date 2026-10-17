@@ -1,8 +1,14 @@
-import { describe, expect, it } from 'vitest';
-import { ValidationError, type SearchResult } from '../src/client.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DeepSeekApiError, DeepSeekClient, ValidationError, type SearchResult } from '../src/client.js';
 import {
+  FETCH_TOOL_NAME,
+  SEARCH_TOOL_NAME,
+  fetchToolDefinition,
   formatFetchedPage,
   formatSearchResults,
+  handleFetch,
+  handleSearch,
+  searchToolDefinition,
   validateFetchArgs,
   validateSearchArgs,
 } from '../src/tools.js';
@@ -122,5 +128,94 @@ describe('formatFetchedPage', () => {
 
   it('标题为空字符串时仅输出正文', () => {
     expect(formatFetchedPage({ title: '', content: '正文' })).toBe('正文');
+  });
+});
+
+describe('工具定义', () => {
+  it('两个工具 name 与 inputSchema 正确', () => {
+    expect(SEARCH_TOOL_NAME).toBe('web_search');
+    expect(FETCH_TOOL_NAME).toBe('web_fetch');
+    expect(searchToolDefinition.inputSchema.type).toBe('object');
+    expect(searchToolDefinition.inputSchema.required).toEqual(['query']);
+    expect(fetchToolDefinition.inputSchema.required).toEqual(['url']);
+    expect(searchToolDefinition.inputSchema.properties.query.maxLength).toBe(128);
+    expect(fetchToolDefinition.inputSchema.properties.url.maxLength).toBe(8192);
+  });
+});
+
+function stubClient(): DeepSeekClient {
+  return { search: vi.fn(), fetchUrl: vi.fn() } as unknown as DeepSeekClient;
+}
+
+describe('handleSearch', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('成功 → 正常 result，text 含格式化结果', async () => {
+    const client = stubClient();
+    (client.search as ReturnType<typeof vi.fn>).mockResolvedValue({ results: [fullResult] });
+    const res = await handleSearch(client, { query: 'DeepSeek' });
+    expect(res.isError).toBeUndefined();
+    expect(res.content[0]).toMatchObject({ type: 'text' });
+    expect((res.content[0] as { text: string }).text).toContain('DeepSeek V4 模型发布');
+    expect(client.search).toHaveBeenCalledWith({ query: 'DeepSeek' });
+  });
+
+  it('ValidationError → isError 且消息含「参数错误」', async () => {
+    const res = await handleSearch(stubClient(), { query: '  ' });
+    expect(res.isError).toBe(true);
+    expect((res.content[0] as { text: string }).text).toContain('参数错误');
+  });
+
+  it('402 → isError 且提示充值', async () => {
+    const client = stubClient();
+    (client.search as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new DeepSeekApiError(402, 'insufficient balance'),
+    );
+    const res = await handleSearch(client, { query: 'x' });
+    expect(res.isError).toBe(true);
+    expect((res.content[0] as { text: string }).text).toContain('余额不足');
+  });
+
+  it('401 → isError 且提示 API Key', async () => {
+    const client = stubClient();
+    (client.search as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new DeepSeekApiError(401, 'invalid key'),
+    );
+    const res = await handleSearch(client, { query: 'x' });
+    expect(res.isError).toBe(true);
+    expect((res.content[0] as { text: string }).text).toContain('API_KEY');
+  });
+
+  it('未知异常 → isError 且透传 message', async () => {
+    const client = stubClient();
+    (client.search as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+    const res = await handleSearch(client, { query: 'x' });
+    expect(res.isError).toBe(true);
+    expect((res.content[0] as { text: string }).text).toContain('boom');
+  });
+});
+
+describe('handleFetch', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('成功 → text 为 # 标题 + 正文', async () => {
+    const client = stubClient();
+    (client.fetchUrl as ReturnType<typeof vi.fn>).mockResolvedValue({
+      title: 'Example',
+      content: 'hello',
+    });
+    const res = await handleFetch(client, { url: 'https://example.com' });
+    expect(res.isError).toBeUndefined();
+    expect((res.content[0] as { text: string }).text).toBe('# Example\n\nhello');
+  });
+
+  it('404 → isError 且给出语义化建议', async () => {
+    const client = stubClient();
+    (client.fetchUrl as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new DeepSeekApiError(404, 'no content'),
+    );
+    const res = await handleFetch(client, { url: 'https://example.com/404' });
+    expect(res.isError).toBe(true);
+    expect((res.content[0] as { text: string }).text).toContain('无法抓取');
   });
 });
