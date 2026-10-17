@@ -7,7 +7,10 @@
   "bin": {
     "deepseek-websearch-mcp": "dist/index.js"
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "engines": {
     "node": ">=20"
   },
@@ -26,12 +29,12 @@
     "prepare": "npm run build"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.32.1"
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "typescript": "^5.6.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.6.0",
     "vitest": "^3.2.0"
   }
 }
