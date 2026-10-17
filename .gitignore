@@ -80,7 +80,8 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
+# dist 产物入库：GitHub 安装路径（pacote 临时克隆）无法执行构建，见 README
+!dist/
 .output
 
 # Gatsby files
