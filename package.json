@@ -1,5 +1,5 @@
 {
-  "name": "@xinzhuang/deepseek-websearch-mcp",
+  "name": "@frankzhang-ai/deepseek-websearch-mcp",
   "version": "0.1.0",
   "description": "MCP server exposing DeepSeek web search & fetch APIs (web_search / web_fetch) over stdio",
   "type": "module",
