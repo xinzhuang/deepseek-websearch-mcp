@@ -23,24 +23,30 @@
 ### 方式一：npx 直接运行（推荐）
 
 ```bash
-npx -y github:xinzhuang/deepseek-websearch-mcp
+npx -y @xinzhuang/deepseek-websearch-mcp
 ```
-
-> 发布到 npm 后可简写为 `npx -y deepseek-websearch-mcp`。
 
 ### 方式二：全局安装
 
 ```bash
-npm install -g github:xinzhuang/deepseek-websearch-mcp
+npm install -g @xinzhuang/deepseek-websearch-mcp
 deepseek-websearch-mcp
 ```
+
+### 方式二备选：从 GitHub 安装（不经 npm registry）
+
+```bash
+npx -y github:xinzhuang/deepseek-websearch-mcp
+```
+
+> 注意：npm v11 对 `npm install -g github:...` 存在已知缺陷（安装后留下指向已清理临时目录的死链，见 [npm/cli#1390](https://github.com/npm/cli/issues/1390) 一类问题），如遇 `command not found` 请改用上方 registry 安装。
 
 ### 方式三：客户端配置
 
 **Claude Code**
 
 ```bash
-claude mcp add deepseek-websearch -s user -e DEEPSEEK_API_KEY=sk-你的key -- npx -y github:xinzhuang/deepseek-websearch-mcp
+claude mcp add deepseek-websearch -s user -e DEEPSEEK_API_KEY=sk-你的key -- npx -y @xinzhuang/deepseek-websearch-mcp
 ```
 
 **Cursor / 通用 JSON（`mcp.json`）**
@@ -50,7 +56,7 @@ claude mcp add deepseek-websearch -s user -e DEEPSEEK_API_KEY=sk-你的key -- np
   "mcpServers": {
     "deepseek-websearch": {
       "command": "npx",
-      "args": ["-y", "github:xinzhuang/deepseek-websearch-mcp"],
+      "args": ["-y", "@xinzhuang/deepseek-websearch-mcp"],
       "env": { "DEEPSEEK_API_KEY": "sk-你的key" }
     }
   }
@@ -64,7 +70,7 @@ claude mcp add deepseek-websearch -s user -e DEEPSEEK_API_KEY=sk-你的key -- np
   "servers": {
     "deepseek-websearch": {
       "command": "npx",
-      "args": ["-y", "github:xinzhuang/deepseek-websearch-mcp"],
+      "args": ["-y", "@xinzhuang/deepseek-websearch-mcp"],
       "env": { "DEEPSEEK_API_KEY": "sk-你的key" }
     }
   }

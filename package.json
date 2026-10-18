@@ -1,9 +1,13 @@
 {
-  "name": "deepseek-websearch-mcp",
+  "name": "@xinzhuang/deepseek-websearch-mcp",
   "version": "0.1.0",
   "description": "MCP server exposing DeepSeek web search & fetch APIs (web_search / web_fetch) over stdio",
   "type": "module",
   "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "bin": {
     "deepseek-websearch-mcp": "dist/index.js"
   },
