@@ -23,13 +23,13 @@
 ### 方式一：npx 直接运行（推荐）
 
 ```bash
-npx -y @frankzhang-ai/deepseek-websearch-mcp
+npx -y @frankzhang.ai/deepseek-websearch-mcp
 ```
 
 ### 方式二：全局安装
 
 ```bash
-npm install -g @frankzhang-ai/deepseek-websearch-mcp
+npm install -g @frankzhang.ai/deepseek-websearch-mcp
 deepseek-websearch-mcp
 ```
 
@@ -46,7 +46,7 @@ npx -y github:xinzhuang/deepseek-websearch-mcp
 **Claude Code**
 
 ```bash
-claude mcp add deepseek-websearch -s user -e DEEPSEEK_API_KEY=sk-你的key -- npx -y @frankzhang-ai/deepseek-websearch-mcp
+claude mcp add deepseek-websearch -s user -e DEEPSEEK_API_KEY=sk-你的key -- npx -y @frankzhang.ai/deepseek-websearch-mcp
 ```
 
 **Cursor / 通用 JSON（`mcp.json`）**
@@ -56,7 +56,7 @@ claude mcp add deepseek-websearch -s user -e DEEPSEEK_API_KEY=sk-你的key -- np
   "mcpServers": {
     "deepseek-websearch": {
       "command": "npx",
-      "args": ["-y", "@frankzhang-ai/deepseek-websearch-mcp"],
+      "args": ["-y", "@frankzhang.ai/deepseek-websearch-mcp"],
       "env": { "DEEPSEEK_API_KEY": "sk-你的key" }
     }
   }
@@ -70,7 +70,7 @@ claude mcp add deepseek-websearch -s user -e DEEPSEEK_API_KEY=sk-你的key -- np
   "servers": {
     "deepseek-websearch": {
       "command": "npx",
-      "args": ["-y", "@frankzhang-ai/deepseek-websearch-mcp"],
+      "args": ["-y", "@frankzhang.ai/deepseek-websearch-mcp"],
       "env": { "DEEPSEEK_API_KEY": "sk-你的key" }
     }
   }
@@ -113,4 +113,4 @@ npm run build       # tsc 构建到 dist/
 
 ## License
 
-[MIT](LICENSE)
+[Apache-2.0](LICENSE)

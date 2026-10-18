@@ -1,9 +1,9 @@
 {
-  "name": "@frankzhang-ai/deepseek-websearch-mcp",
+  "name": "@frankzhang.ai/deepseek-websearch-mcp",
   "version": "0.1.0",
   "description": "MCP server exposing DeepSeek web search & fetch APIs (web_search / web_fetch) over stdio",
   "type": "module",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"
@@ -18,7 +18,10 @@
   "engines": {
     "node": ">=20"
   },
-  "repository": "github:xinzhuang/deepseek-websearch-mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xinzhuang/deepseek-websearch-mcp.git"
+  },
   "keywords": [
     "mcp",
     "deepseek",
